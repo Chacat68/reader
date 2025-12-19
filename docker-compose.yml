@@ -11,7 +11,7 @@ services:
     container_name: reader #容器名 可自行修改
     restart: always
     ports:
-      - 4396:8080 #4396端口映射可自行修改,8080请勿修改
+      - 1133:8080 #1133端口映射可自行修改,8080请勿修改
     volumes:
       - /Users/charliefoo/reader/logs:/logs #log映射目录
       - /Users/charliefoo/reader/storage:/storage #数据映射目录

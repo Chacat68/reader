@@ -13,8 +13,8 @@ services:
     ports:
       - 4396:8080 #4396端口映射可自行修改,8080请勿修改
     volumes:
-      - /home/reader/logs:/logs #log映射目录 /home/reader/logs 映射目录可自行修改
-      - /home/reader/storage:/storage #数据映射目录 /home/reader/storage 映射目录可自行修改
+      - /Users/charliefoo/reader/logs:/logs #log映射目录
+      - /Users/charliefoo/reader/storage:/storage #数据映射目录
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       #- READER_APP_USERLIMIT=50 #用户上限,默认且最大值为50

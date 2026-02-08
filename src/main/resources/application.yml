@@ -9,7 +9,7 @@ reader:
     secureKey: ""
     proxy: true
     proxyType: "HTTP"
-    proxyHost: "127.0.0.1"
+    proxyHost: "host.orb.internal"
     proxyPort: "6152"
     proxyUsername: ""
     proxyPassword: ""

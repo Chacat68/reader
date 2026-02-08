@@ -7,12 +7,13 @@ reader:
     secure: false
     inviteCode: ""
     secureKey: ""
-    proxy: true
-    proxyType: "HTTP"
-    proxyHost: "host.orb.internal"
-    proxyPort: "6152"
-    proxyUsername: ""
-    proxyPassword: ""
+    # 代理配置（用于获取封面等网络请求）
+    proxy: false                    # 是否启用代理
+    proxyType: "HTTP"              # 代理类型: HTTP, SOCKS4, SOCKS5
+    proxyHost: ""                  # 代理主机地址，如: 127.0.0.1
+    proxyPort: ""                  # 代理端口，如: 7890
+    proxyUsername: ""              # 代理用户名（可选）
+    proxyPassword: ""              # 代理密码（可选）
     cacheChapterContent: true
     userLimit: 50
     userBookLimit: 200

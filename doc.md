@@ -134,6 +134,13 @@ reader:
     cacheChapterContent: false # 是否缓存章节内容
     debugLog: false        # 是否打开调试日志
     autoClearInactiveUser: 0 # 是否自动清理不活跃用户，为0不清理，大于0为清理超过 autoClearInactiveUser 天未登录的用户
+    # 代理配置（用于获取封面等网络请求）
+    proxy: false           # 是否启用代理
+    proxyType: \"HTTP\"      # 代理类型: HTTP, SOCKS4, SOCKS5
+    proxyHost: \"\"          # 代理主机地址，例如: 127.0.0.1
+    proxyPort: \"\"          # 代理端口，例如: 7890
+    proxyUsername: \"\"      # 代理用户名（可选）
+    proxyPassword: \"\"      # 代理密码（可选）
     mongoUri: ""           # mongodb uri 用于备份数据
     mongoDbName: "reader"  # mongodb 数据库名称
     shelfUpdateInteval: 10 # 书架自动更新间隔时间，单位分钟，必须是10的倍数
@@ -155,6 +162,46 @@ reader:
     webUrl: http://localhost:${reader.server.port}    # web链接
 
 ```
+
+### 代理配置说明
+
+某些书籍封面可能需要通过代理才能访问。可以通过以下方式配置：
+
+**Docker 环境变量示例：**
+
+```bash
+# 使用 HTTP 代理
+docker run -d --restart=always --name=reader \\
+  -e \"SPRING_PROFILES_ACTIVE=prod\" \\
+  -e \"READER_APP_PROXY=true\" \\
+  -e \"READER_APP_PROXYTYPE=HTTP\" \\
+  -e \"READER_APP_PROXYHOST=127.0.0.1\" \\
+  -e \"READER_APP_PROXYPORT=7890\" \\
+  -v $(pwd)/logs:/logs \\
+  -v $(pwd)/storage:/storage \\
+  -p 8080:8080 \\
+  hectorqin/reader
+
+# 使用 SOCKS5 代理并带认证
+docker run -d --restart=always --name=reader \\
+  -e \"SPRING_PROFILES_ACTIVE=prod\" \\
+  -e \"READER_APP_PROXY=true\" \\
+  -e \"READER_APP_PROXYTYPE=SOCKS5\" \\
+  -e \"READER_APP_PROXYHOST=127.0.0.1\" \\
+  -e \"READER_APP_PROXYPORT=1080\" \\
+  -e \"READER_APP_PROXYUSERNAME=username\" \\
+  -e \"READER_APP_PROXYPASSWORD=password\" \\
+  -v $(pwd)/logs:/logs \\
+  -v $(pwd)/storage:/storage \\
+  -p 8080:8080 \\
+  hectorqin/reader
+```
+
+**注意事项：**
+- 启用代理后，所有网络请求（包括封面下载、书源访问等）都会通过代理进行
+- 代理配置错误可能导致封面和内容加载失败
+- 建议先在本地测试代理配置是否正常工作
+- 支持的代理类型：HTTP、SOCKS4、SOCKS5
 
 ## WebDAV同步配置
 

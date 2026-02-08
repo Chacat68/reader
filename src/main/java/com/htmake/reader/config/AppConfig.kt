@@ -23,4 +23,12 @@ class AppConfig {
     var exportCharset = "UTF-8" // 导出字符集
     var exportNoChapterName = false // 不添加章节名
     var exportPictureFile = false // 导出图片
+    
+    // 代理配置
+    var proxy = false     // 是否启用代理
+    var proxyType = "HTTP"  // 代理类型: HTTP, SOCKS4, SOCKS5
+    var proxyHost = ""    // 代理主机
+    var proxyPort = ""    // 代理端口
+    var proxyUsername = "" // 代理用户名（可选）
+    var proxyPassword = "" // 代理密码（可选）
 }

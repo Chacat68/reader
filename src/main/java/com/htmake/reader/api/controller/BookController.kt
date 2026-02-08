@@ -177,18 +177,23 @@ class BookController(coroutineContext: CoroutineContext): BaseController(corouti
 
     suspend fun getBookCover(context: RoutingContext) {
         var coverUrl = context.queryParam("path").firstOrNull() ?: ""
+        val forceRefresh = context.queryParam("refresh").firstOrNull() == "true"
+        
         if (coverUrl.isNullOrEmpty()) {
             context.response().setStatusCode(404).end()
             return
         }
+        
         var ext = getFileExt(coverUrl, "png")
         val md5Encode = MD5Utils.md5Encode(coverUrl).toString()
         var cachePath = getWorkDir("storage", "cache", md5Encode + "." + ext)
         var cacheFile = File(cachePath)
-        if (cacheFile.exists()) {
+        
+        // 如果不是强制刷新且缓存存在，直接返回缓存
+        if (!forceRefresh && cacheFile.exists()) {
             logger.info("send cache: {}", cacheFile)
             context.response().putHeader("Cache-Control", "86400").sendFile(cacheFile.toString())
-            return;
+            return
         }
 
         if (!cacheFile.parentFile.exists()) {
@@ -196,16 +201,88 @@ class BookController(coroutineContext: CoroutineContext): BaseController(corouti
         }
 
         launch(Dispatchers.IO) {
-            webClient.getAbs(coverUrl).timeout(3000).send {
-                var bodyBytes = it.result()?.bodyAsBuffer()?.getBytes()
-                if (bodyBytes != null) {
-                    var res = context.response().putHeader("Cache-Control", "86400")
-                    cacheFile.writeBytes(bodyBytes)
-                    res.sendFile(cacheFile.toString())
-                } else {
-                    context.response().setStatusCode(404).end()
+            // 增加重试机制：最多重试3次
+            var retryCount = 0
+            val maxRetries = 3
+            var success = false
+            
+            while (retryCount < maxRetries && !success) {
+                try {
+                    webClient.getAbs(coverUrl).timeout(5000).send { ar ->
+                        if (ar.succeeded()) {
+                            var bodyBytes = ar.result()?.bodyAsBuffer()?.getBytes()
+                            if (bodyBytes != null && bodyBytes.isNotEmpty()) {
+                                try {
+                                    cacheFile.writeBytes(bodyBytes)
+                                    context.response().putHeader("Cache-Control", "86400").sendFile(cacheFile.toString())
+                                    logger.info("封面下载成功: {} (重试次数: {})", coverUrl, retryCount)
+                                    success = true
+                                } catch (e: Exception) {
+                                    logger.error("保存封面文件失败: {}, 错误: {}", coverUrl, e.message)
+                                    context.response().setStatusCode(500).end()
+                                }
+                            } else {
+                                logger.warn("封面下载结果为空: {} (重试次数: {})", coverUrl, retryCount)
+                                if (retryCount == maxRetries - 1) {
+                                    context.response().setStatusCode(404).end()
+                                }
+                            }
+                        } else {
+                            logger.error("封面下载失败: {}, 错误: {}, (重试次数: {})", coverUrl, ar.cause()?.message, retryCount)
+                            if (retryCount == maxRetries - 1) {
+                                context.response().setStatusCode(404).end()
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    logger.error("封面请求异常: {}, 错误: {}, (重试次数: {})", coverUrl, e.message, retryCount)
+                    if (retryCount == maxRetries - 1) {
+                        context.response().setStatusCode(500).end()
+                    }
+                }
+                
+                if (!success) {
+                    retryCount++
+                    if (retryCount < maxRetries) {
+                        // 等待一段时间后重试（递增等待时间）
+                        kotlinx.coroutines.delay((retryCount * 500).toLong())
+                    }
                 }
             }
+        }
+    }
+
+    suspend fun refreshBookCover(context: RoutingContext): ReturnData {
+        val returnData = ReturnData()
+        if (!checkAuth(context)) {
+            return returnData.setData("NEED_LOGIN").setErrorMsg("请登录后使用")
+        }
+        
+        val bookUrl = context.bodyAsJson.getString("bookUrl")
+        val coverUrl = context.bodyAsJson.getString("coverUrl")
+        
+        if (bookUrl.isNullOrEmpty()) {
+            return returnData.setErrorMsg("书籍URL不能为空")
+        }
+        
+        try {
+            // 清除封面缓存
+            if (!coverUrl.isNullOrEmpty()) {
+                val ext = getFileExt(coverUrl, "png")
+                val md5Encode = MD5Utils.md5Encode(coverUrl).toString()
+                val cachePath = getWorkDir("storage", "cache", md5Encode + "." + ext)
+                val cacheFile = File(cachePath)
+                
+                if (cacheFile.exists()) {
+                    cacheFile.delete()
+                    logger.info("已清除封面缓存: {}", cachePath)
+                }
+            }
+            
+            return returnData.setData(true).setSuccessMsg("封面缓存已清除，重新加载页面即可获取最新封面")
+        } catch (e: Exception) {
+            logger.error("刷新封面失败: {}", e.message)
+            return returnData.setErrorMsg("刷新封面失败: ${e.message}")
         }
     }
 

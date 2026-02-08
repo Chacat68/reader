@@ -199,6 +199,7 @@ class YueduApi : RestVerticle() {
 
         // 封面
         router.get("/reader3/cover").coroutineHandlerWithoutRes { bookController.getBookCover(it) }
+        router.post("/reader3/refreshBookCover").coroutineHandler { bookController.refreshBookCover(it) }
 
         // 搜索其它来源
         router.get("/reader3/searchBookSource").coroutineHandler { bookController.searchBookSource(it) }

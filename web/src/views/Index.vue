@@ -591,16 +591,25 @@
                   class="el-icon-close"
                   v-if="!isSearchResult && showBookEditButton"
                   @click.stop="deleteBook(book)"
+                  title="删除书籍"
+                ></i>
+                <i
+                  class="el-icon-refresh"
+                  v-if="!isSearchResult && showBookEditButton"
+                  @click.stop="refreshCover(book)"
+                  title="刷新封面"
                 ></i>
                 <i
                   class="el-icon-edit"
                   v-if="!isSearchResult && showBookEditButton"
                   @click.stop="editBook(book)"
+                  title="编辑书籍"
                 ></i>
                 <i
                   class="el-icon-edit"
                   v-if="isSearchResult"
                   @click.stop="editBook(book, true)"
+                  title="编辑书籍"
                 ></i>
                 <el-badge
                   class="unread-num-badge"
@@ -1565,6 +1574,51 @@ export default {
           this.$message.error("删除失败 " + (error && error.toString()));
         }
       );
+    },
+    async refreshCover(book) {
+      if (!book || !book.bookUrl) {
+        this.$message.error("书籍信息错误");
+        return;
+      }
+      
+      const loadingMsg = this.$message({
+        message: "正在刷新封面...",
+        type: "info",
+        duration: 0
+      });
+      
+      try {
+        const res = await Axios.post(this.api + "/refreshBookCover", {
+          bookUrl: book.bookUrl,
+          coverUrl: this.getBookCoverUrl(book)
+        });
+        
+        loadingMsg.close();
+        
+        if (res.data.isSuccess) {
+          this.$message.success("封面缓存已清除，正在重新加载...");
+          
+          // 强制刷新封面图片
+          setTimeout(() => {
+            // 找到对应的图片元素并重新加载
+            const bookIndex = this.bookList.findIndex(b => b.bookUrl === book.bookUrl);
+            if (bookIndex >= 0 && this.$refs.bookCoverList && this.$refs.bookCoverList[bookIndex]) {
+              const imgEl = this.$refs.bookCoverList[bookIndex];
+              const currentSrc = imgEl.src;
+              // 添加时间戳参数强制刷新
+              const newSrc = currentSrc.includes('?') 
+                ? currentSrc.split('?')[0] + '?refresh=true&t=' + Date.now()
+                : currentSrc + '?refresh=true&t=' + Date.now();
+              imgEl.src = newSrc;
+            }
+          }, 500);
+        } else {
+          this.$message.error(res.data.errorMsg || "刷新封面失败");
+        }
+      } catch (error) {
+        loadingMsg.close();
+        this.$message.error("刷新封面失败: " + (error && error.toString()));
+      }
     },
     editBook(book, isAdd, onSuccess) {
       if (!book || !book.name || !book.bookUrl || !book.origin) {
